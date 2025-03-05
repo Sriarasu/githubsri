@@ -1,0 +1,203 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "toc_visible": true,
+      "authorship_tag": "ABX9TyMH8+gPYD0mBa1CRY1prhxD",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Sriarasu/githubsri/blob/main/mapping%20for%20annotation\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "source": [
+        "!pip install biopython\n",
+        "from Bio import SeqIO\n"
+      ],
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fUKNb5ukL51n",
+        "outputId": "2c061812-7821-4ce6-e22f-9606fc731d9e"
+      },
+      "execution_count": 2,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Collecting biopython\n",
+            "  Downloading biopython-1.85-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (13 kB)\n",
+            "Requirement already satisfied: numpy in /usr/local/lib/python3.11/dist-packages (from biopython) (1.26.4)\n",
+            "Downloading biopython-1.85-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m3.3/3.3 MB\u001b[0m \u001b[31m42.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hInstalling collected packages: biopython\n",
+            "Successfully installed biopython-1.85\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Convert spaces to tabs in mapping files\n",
+        "def fix_mapping_file(input_file, output_file):\n",
+        "    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:\n",
+        "        for line in infile:\n",
+        "            fixed_line = '\\t'.join(line.strip().split())  # Replace spaces with tabs\n",
+        "            outfile.write(fixed_line + '\\n')\n",
+        "\n",
+        "# Define file paths\n",
+        "fix_mapping_file(\"IC4_Trinity_to_Setaria_sorted.tsv\", \"IC4_Trinity_to_Setaria_sorted_fixed.tsv\")\n",
+        "fix_mapping_file(\"IC41_Trinity_to_Setaria_sorted.tsv\", \"IC41_Trinity_to_Setaria_sorted_fixed.tsv\")\n",
+        "\n",
+        "print(\"✅ Mapping files fixed! Use the *_fixed.tsv versions in your main script.\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "D-DahB-XOIiX",
+        "outputId": "f9f511da-89d0-4641-c2f2-97fbc5f18a75"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "✅ Mapping files fixed! Use the *_fixed.tsv versions in your main script.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from Bio import SeqIO\n",
+        "\n",
+        "# File paths\n",
+        "gene_list_file = \"gene_list.txt\"  # Replace with your gene list file\n",
+        "mapping_files = [\"IC4_Trinity_to_Setaria_sorted_fixed.tsv\", \"IC41_Trinity_to_Setaria_sorted_fixed.tsv\"]\n",
+        "pep_files = [\"IC4_Clustered.fasta.transdecoder.pep\", \"IC41_Clustered.fasta.transdecoder.pep\"]\n",
+        "output_fasta = \"filtered_proteins.fasta\"\n",
+        "\n",
+        "# Load Gene ID to Trinity ID mapping\n",
+        "gene_to_trinity = {}\n",
+        "for mapping_file in mapping_files:\n",
+        "    with open(mapping_file, 'r') as f:\n",
+        "        for line in f:\n",
+        "            parts = line.strip().split(\"\\t\")  # Ensure tab-separated\n",
+        "            if len(parts) < 2:\n",
+        "                continue\n",
+        "            trinity_id, gene_id = parts[0], parts[1]\n",
+        "            gene_to_trinity[gene_id] = trinity_id\n",
+        "\n",
+        "# Load Gene IDs\n",
+        "gene_ids = set()\n",
+        "with open(gene_list_file, 'r') as f:\n",
+        "    for line in f:\n",
+        "        gene_id = line.strip()\n",
+        "        if gene_id in gene_to_trinity:\n",
+        "            gene_ids.add(gene_to_trinity[gene_id])  # Convert to Trinity ID\n",
+        "\n",
+        "# Extract matching proteins\n",
+        "with open(output_fasta, 'w') as out_fasta:\n",
+        "    for pep_file in pep_files:\n",
+        "        for record in SeqIO.parse(pep_file, \"fasta\"):\n",
+        "            trinity_id = record.id.split()[0]  # Extract only the first part of the header\n",
+        "            if trinity_id in gene_ids:  # Match Trinity ID\n",
+        "                SeqIO.write(record, out_fasta, \"fasta\")\n",
+        "\n",
+        "print(f\"✅ Extracted protein sequences saved in {output_fasta}\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "WXH6Ty6OOPzW",
+        "outputId": "6f44db7e-ed48-472c-ccc7-35e8b60ee8e8"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "✅ Extracted protein sequences saved in filtered_proteins.fasta\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from Bio import SeqIO\n",
+        "\n",
+        "# File paths\n",
+        "filtered_fasta = \"filtered_proteins.fasta\"\n",
+        "mapping_files = [\"IC4_Trinity_to_Setaria_sorted_fixed.tsv\", \"IC41_Trinity_to_Setaria_sorted_fixed.tsv\"]\n",
+        "output_fasta = \"filtered_proteins_with_geneid.fasta\"\n",
+        "\n",
+        "# Load Trinity ID to Gene ID mapping\n",
+        "trinity_to_gene = {}\n",
+        "for mapping_file in mapping_files:\n",
+        "    with open(mapping_file, 'r') as f:\n",
+        "        for line in f:\n",
+        "            parts = line.strip().split(\"\\t\")\n",
+        "            if len(parts) < 2:\n",
+        "                continue\n",
+        "            trinity_id, gene_id = parts[0], parts[1]\n",
+        "            trinity_to_gene[trinity_id] = gene_id\n",
+        "\n",
+        "# Replace Trinity IDs with Gene IDs in FASTA file\n",
+        "with open(output_fasta, 'w') as out_fasta:\n",
+        "    for record in SeqIO.parse(filtered_fasta, \"fasta\"):\n",
+        "        trinity_id = record.id.split()[0]  # Extract only the first part of the header\n",
+        "        gene_id = trinity_to_gene.get(trinity_id, trinity_id)  # Replace if found\n",
+        "        record.id = gene_id  # Modify header\n",
+        "        record.description = \"\"  # Remove extra metadata\n",
+        "        SeqIO.write(record, out_fasta, \"fasta\")\n",
+        "\n",
+        "print(f\"✅ Updated FASTA file saved as {output_fasta}\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "dzxBNzggQlkz",
+        "outputId": "7f616df8-a3ff-4f44-f77e-a4538f8bcc10"
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "✅ Updated FASTA file saved as filtered_proteins_with_geneid.fasta\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
